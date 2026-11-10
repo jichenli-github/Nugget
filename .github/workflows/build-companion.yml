@@ -1,0 +1,24 @@
+name: Build NuggetQuery IPA
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-companion:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode 27 or newer
+        run: |
+          xcode_path=$(find /Applications -maxdepth 1 -name 'Xcode*.app' | sort -V | tail -1)
+          test -n "$xcode_path"
+          sudo xcode-select --switch "$xcode_path/Contents/Developer"
+          xcodebuild -version
+          sdk_version=$(xcrun --sdk iphoneos --show-sdk-version)
+          test "${sdk_version%%.*}" -ge 27 || { echo 'Runner needs Xcode with iOS 27 SDK'; exit 1; }
+      - name: Build unsigned companion
+        run: bash companion/build-ipa.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: NuggetQuery-unsigned
+          path: companion/build/NuggetQuery-unsigned.ipa

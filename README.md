@@ -8,7 +8,7 @@ Customize your device with animated wallpapers, disable pesky daemons, and more!
 Make sure you have installed the [requirements](#requirements) if you are on Windows or Linux.
 
 > [!WARNING]
-> DO NOT USE THIS ON iOS 27! It will most likely result in data loss. Apple has patched the partial restore method that Nugget uses.
+> Do not use partial restore or BookRestore on iOS 27: Apple has patched that method. This fork uses an experimental, separate NuggetQuery container bridge on 27.0–27.2; see the [support matrix](companion/SUPPORT.zh-CN.md). It does not provide full Nugget compatibility.
 
 > [!NOTE]
 > Please back up your data before using this Project! Nugget may cause unforeseen problems, so it is better to be safe than sorry. We are not responsible for any damage done to your device.
@@ -198,14 +198,21 @@ Sparserestore works on all versions iOS 17.0-18.1.1.
 
 BookRestore works on all versions iOS 18.2-26.1.
 
-Experimental MobileGestalt support for iOS 27.0–27.2 uses the signed,
+Experimental container support for iOS 27.0–27.2 uses the signed,
 device-side [NuggetQuery companion](companion/README.md) and
-[worse_query](https://github.com/forcequitOS/worse_query). Build/install the
-companion with an App Group first. This does not restore Feature Flags, AI
-eligibility, passcode themes or resolution/RDAR support on these versions.
+[worse_query](https://github.com/forcequitOS/worse_query), with signed App Group
+resolution from [GestaltX](https://github.com/huamidev/GestaltX). Build/install the
+updated protocol-2 companion first. MobileGestalt, container-targeted templates,
+PosterBoard file transport and lock-screen-footnote writes are implemented;
+The original AI/Eligibility page also offers a GestaltX-style MG AI capability
+and independent region-code/sales-region alternative on iOS 27.0–27.2. These are
+activation attempts, not a guarantee of AI service access or EU sideloading.
+27.x file permissions, formats and feature effects require real-device validation.
+Other destinations are rejected before sending the batch. See the
+[complete feature/path matrix](companion/SUPPORT.zh-CN.md).
 
 > [!NOTE]
-> **BookRestore-based MobileGestalt and AI Enabler tweaks are not supported on iOS 26.2+.** The experimental iOS 27.0–27.2 companion provides a separate MobileGestalt-only method; AI Enabler remains unsupported.
+> **BookRestore-based MobileGestalt and AI Enabler tweaks are not supported on iOS 26.2+.** The iOS 27.0–27.2 companion is a separate container method; the legacy AI eligibility file path, Feature Flags, global preferences, status bar, daemon, passcode-theme and resolution/RDAR access remain unavailable. The MG-only AI/region alternative is separate from those file writes.
 
 ## Read More
 If you would like to read more about the inner workings of the exploit and iOS restore system, I made a write up which you can read [here][ReadMoreGist].

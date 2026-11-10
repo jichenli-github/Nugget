@@ -56,10 +56,10 @@ class VersionTests(unittest.TestCase):
 
 
 class PlanTests(unittest.TestCase):
-    def test_split_mga_from_regular_files(self):
+    def test_all_container_files_use_companion(self):
         native = mga(domain=query.MGA_DOMAIN, path=query.MGA_RELATIVE_PATH)
-        regular = FileToRestore(b"test", "Library/test", domain="HomeDomain")
-        self.assertEqual(query.split_query_files([native, regular]), ([native], [regular]))
+        poster = FileToRestore(b"test", "Library/test", domain="AppDomain-com.apple.PosterBoard")
+        self.assertEqual(query.split_query_files([native, poster]), ([native, poster], []))
 
     def test_unsupported_paths_rejected_before_transport(self):
         for domain, path in (("", "/var/mobile/Library/Caches/TelephonyUI-10/key.png"),
@@ -76,13 +76,15 @@ class PlanTests(unittest.TestCase):
 
     def test_payload_contains_no_caller_controlled_destination(self):
         request = query.make_request(mga(), "24B123", "27.1")
-        self.assertEqual(request["operation"], "write")
+        self.assertEqual(request["operation"], "batch")
+        self.assertEqual(request["files"][0]["operation"], "write")
+        self.assertEqual(request["files"][0]["domain"], query.MGA_DOMAIN)
         self.assertEqual(request["build"], "24B123")
         self.assertNotIn("path", request)
         self.assertEqual(plistlib.loads(plistlib.dumps(request)), request)
 
     def test_reset_is_original_restore_not_empty_write(self):
-        self.assertEqual(query.make_request(mga(b""), "build", "27.0")["operation"], "restore_original")
+        self.assertEqual(query.make_request(mga(b""), "build", "27.0")["files"][0]["operation"], "restore_original")
 
     def test_invalid_gestalt_is_rejected(self):
         for contents in (b"not a plist", plistlib.dumps({}), plistlib.dumps([]), "text", None):
@@ -98,7 +100,7 @@ class PlanTests(unittest.TestCase):
             file = mga()
             file.contents = None
             file.contents_path = str(path)
-            self.assertEqual(query.make_request(file, "build", "27.0")["contents"], path.read_bytes())
+            self.assertEqual(query.make_request(file, "build", "27.0")["files"][0]["contents"], path.read_bytes())
 
 
 class FakeAFC:
@@ -123,7 +125,7 @@ class FakeAFC:
         self.files[target] = self.files.pop(source)
         self.published = plistlib.loads(self.files[target])
         if self.outcome is not None:
-            result = {"protocol": 1, "id": self.published["id"], "build": self.published["build"],
+            result = {"protocol": query.PROTOCOL, "id": self.published["id"], "build": self.published["build"],
                       "success": bool(self.outcome), "message": "permission denied"}
             if callable(self.outcome):
                 self.outcome(result)
@@ -155,7 +157,7 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
             await query.perform_worse_query(mga(), device(), None, lambda _: None)
         self.assertEqual(arrest.call_args.kwargs["bundle_id"], "custom.id")
         self.assertEqual(list(afc.files), [query.PENDING, query.RESULT])
-        self.assertEqual(afc.published["operation"], "write")
+        self.assertEqual(afc.published["operation"], "batch")
 
     async def test_device_error_propagates(self):
         with transport(FakeAFC(False)), self.assertRaisesRegex(NuggetException, "permission denied"):
@@ -183,7 +185,7 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(query.PENDING, afc.files)
 
     async def test_wrong_build_or_protocol_cannot_report_success(self):
-        for changes in ({"build": "other-build"}, {"protocol": 2}):
+        for changes in ({"build": "other-build"}, {"protocol": 1}):
             afc = FakeAFC(lambda result: result.update(changes))
             with transport(afc), self.assertRaisesRegex(NuggetException, "incompatible"):
                 await query.perform_worse_query(mga(), device(), None, lambda _: None)
@@ -204,6 +206,9 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.manager = DeviceManager.__new__(DeviceManager)
         self.manager.data_singleton = SimpleNamespace(current_device=device())
         self.manager.pref_manager = SimpleNamespace(auto_reboot=False, bookrestore_apply_mode=BookRestoreApplyMethod.AFC)
+        saved_ids = patch("src.devicemanagement.device_manager.tweaks")
+        saved_ids.start()
+        self.addCleanup(saved_ids.stop)
 
     async def test_native_only_never_calls_patched_restore_services(self):
         with patch("src.devicemanagement.device_manager.create_using_usbmux", new=AsyncMock(return_value=FakeAFC())), \

@@ -22,6 +22,10 @@ struct ContentView: View {
                     }
                     if let request {
                         LabeledContent("Operation", value: request.operation)
+                        LabeledContent("Files", value: String(request.entries.count))
+                        ForEach(Array(request.entries.enumerated()), id: \.offset) { _, entry in
+                            Text("\(entry.operation): \(entry.domain)/\(entry.path)").font(.caption)
+                        }
                         LabeledContent("System build", value: request.build)
                         Text(request.id).font(.caption).textSelection(.enabled)
                         Button("Apply to this device") {
@@ -36,7 +40,7 @@ struct ContentView: View {
                 }
                 Section("Status") { Text(message).textSelection(.enabled) }
                 Section("Original backup") {
-                    Text("The first write saves the current file for this OS build in Documents. Reset MobileGestalt in Nugget restores that backup. Keep the backup and this app until you finish resetting.")
+                    Text("Before writing, all targets are checked and their originals are saved in Documents for this OS build. Keep this app and its backups. Reset MobileGestalt in Nugget restores its original. Other container backups are retained for recovery; a crash can interrupt writes or rollback.")
                 }
             }
             .navigationTitle("NuggetQuery")

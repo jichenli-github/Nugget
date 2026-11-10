@@ -1,5 +1,6 @@
 from .tweaks import tweaks, TweakID
 from .tweak_classes import MobileGestaltTweak, MobileGestaltMultiTweak, MobileGestaltPickerTweak, MobileGestaltCacheDataTweak, RdarFixTweak, FeatureFlagTweak, BasicPlistTweak, FileLocation, AdvancedPlistTweak, NullifyFileTweak
+from .mobilegestalt_region_tweak import MobileGestaltRegionTweak
 from .eligibility_tweak import EligibilityTweak, AITweak
 from src.devicemanagement.constants import Device, Version
 
@@ -54,6 +55,7 @@ def load_eligibility(dev: Device):
         TweakID.EUEnabler: EligibilityTweak(),
         TweakID.AIEligibility: AITweak(),
         TweakID.AIGestalt: MobileGestaltTweak("A62OafQ85EJAiiqKn4agtg"),
+        TweakID.AIRegion: MobileGestaltRegionTweak(),
         TweakID.AIFeatureFlags: FeatureFlagTweak(flag_category="Siri", flag_names=['sae_override', 'assistant_engine_override']),
         TweakID.AIFeatureFlagsUI: FeatureFlagTweak(flag_category="SiriUI", flag_names=["sae"]),
         TweakID.SpoofModel: MobileGestaltPickerTweak("h9jDsbgj7xIVeIQ8S3/X3Q", values=[

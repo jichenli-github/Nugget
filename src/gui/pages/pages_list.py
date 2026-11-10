@@ -43,6 +43,8 @@ class Page(Enum):
 
 def get_resettable_pages(device_manager) -> list[Page]:
     device_ver = Version(device_manager.get_current_device_version())
+    if device_manager.data_singleton.current_device.has_worse_query():
+        return [Page.Gestalt]
     page_list: list[Page] = [Page.StatusBar, Page.Springboard, Page.InternalOptions, Page.Daemons]
 
     # add the exploit related pages

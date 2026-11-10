@@ -113,7 +113,9 @@ class SettingsPage(Page):
             # eligibility page button
             patched: bool = self.window.device_manager.get_current_device_patched()
             device_ver = Version(self.window.device_manager.data_singleton.current_device.version)
-            if not patched and device_ver >= Version("17.4") and (device_ver <= Version("17.7") or device_ver >= Version("18.1")):
+            if self.window.device_manager.data_singleton.current_device.has_worse_query():
+                show_eu = True  # Existing page hosts the MG-only AI alternative.
+            elif not patched and device_ver >= Version("17.4") and (device_ver <= Version("17.7") or device_ver >= Version("18.1")):
                 show_eu = device_ver < Version("18.3") or visible
             else:
                 show_eu = False

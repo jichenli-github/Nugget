@@ -326,7 +326,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 for view in (self.ui.chooseGestaltBtn, self.ui.gestaltPageBtn,
                              self.ui.gestaltLocationLbl, self.ui.gestaltLocationTitleLbl):
                     view.show()
-                self.ui.enableAIChk.hide()
+                self.ui.enableAIChk.show()
+                self.ui.euEnablerPageBtn.show()
                 self.ui.aiEnablerContent.hide()
                 self.ui.rdarFixChk.hide()
             if device_ver >= Version("18.0"):
@@ -346,6 +347,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.ui.aiEnablerContent.hide()
             if device_ver < Version("18.2"):
                 self.pages[Page.Gestalt].setup_spoofedModelDrp_models()
+
+            if self.pages[Page.EUEnabler].loaded:
+                self.pages[Page.EUEnabler].configure_for_device()
 
             # hide posterboard .aar video option on ipads
             is_iphone = self.device_manager.get_current_device_model().startswith("iPhone")

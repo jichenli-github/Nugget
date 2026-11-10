@@ -74,7 +74,7 @@ class HomePage(Page):
         device = self.window.device_manager.data_singleton.current_device
         if device is not None and device.has_worse_query():
             support_str = "<span style=\"color: #ffff00;\">" + QCoreApplication.tr(
-                "Experimental: MobileGestalt requires NuggetQuery."
+                "Experimental: container tweaks require NuggetQuery."
             ) + "</span></a>"
         self.ui.phoneVersionLbl.setText(f"<a style=\"text-decoration:none; color: white;\" href=\"#\">iOS {version} ({build}) {support_str}")
 

@@ -349,6 +349,8 @@ class DeviceManager:
         
 
     def add_rebuild_sb_application_state_db(self, files_to_restore: list[FileToRestore]):
+        if self.data_singleton.current_device.has_worse_query():
+            return
         if self.pref_manager.rebuild_sb_application_state_db:
             files_to_restore.append(FileToRestore(
                 contents=b"",
@@ -357,6 +359,8 @@ class DeviceManager:
             ))
 
     async def add_skip_setup(self, files_to_restore: list[FileToRestore], restoring_domains: bool):
+        if self.data_singleton.current_device.has_worse_query():
+            return
         # TODO: Probably should move this to its own file
         if self.pref_manager.skip_setup and (not self.get_current_device_partially_supported() or restoring_domains):
             # get the already existing cloud config info
@@ -496,7 +500,8 @@ class DeviceManager:
     def get_domain_for_path(self, path: str, owner: int = 501, use_bookrestore: bool = False) -> str:
         # returns Domain: str?, Path: str
         if self.data_singleton.current_device.has_worse_query():
-            if path == FileLocation.mga.value or (use_bookrestore and path == FileLocation.resolution.value):
+            if (path == FileLocation.mga.value or path.startswith(("/var/mobile/Containers/", "/private/var/mobile/Containers/"))
+                    or (use_bookrestore and path == FileLocation.resolution.value)):
                 return path, ""
         if ((self.get_current_device_partially_supported() and not path.startswith("/var/mobile/")) or (not self.data_singleton.current_device.has_partial_sparserestore() and self.get_current_device_uses_bookrestore() and use_bookrestore)) and not owner == 0:
             # don't do anything on sparserestore versions
@@ -553,20 +558,17 @@ class DeviceManager:
         restore_bookrestore = use_bookrestore and not self.data_singleton.current_device.has_partial_sparserestore()
         async with await create_using_usbmux(serial=self.data_singleton.current_device.udid) as ld:
             if self.data_singleton.current_device.has_worse_query():
-                query_files, files_to_restore = split_query_files(files_to_restore)
-                if query_files:
-                    await perform_worse_query(query_files[0], self.data_singleton.current_device, ld, update_label)
-                # BookRestore is patched on iOS 27. Never fall through to it.
-                restore_bookrestore = False
-                if not files_to_restore:
-                    if not query_files:
-                        raise NuggetException(QCoreApplication.tr("No changes selected."))
-                    if query_files and self.pref_manager.auto_reboot:
-                        await reboot_device(reboot=True, lockdown_client=ld)
-                    return ApplyAlertMessage(
-                        txt=QCoreApplication.tr("MobileGestalt updated by NuggetQuery. Restart your device to see changes."),
-                        title=QCoreApplication.tr("Success!"), icon=QMessageBox.Information
-                    )
+                query_files, _ = split_query_files(files_to_restore)
+                if not query_files:
+                    raise NuggetException(QCoreApplication.tr("No changes selected."))
+                await perform_worse_query(query_files, self.data_singleton.current_device, ld, update_label)
+                tweaks[TweakID.PosterBoard].config_manager.save_staged_ids(self.get_current_device_udid())
+                if self.pref_manager.auto_reboot:
+                    await reboot_device(reboot=True, lockdown_client=ld)
+                return ApplyAlertMessage(
+                    txt=QCoreApplication.tr("Container files verified by NuggetQuery. Restart your device to see changes."),
+                    title=QCoreApplication.tr("Success!"), icon=QMessageBox.Information
+                )
             if restore_bookrestore:
                 if self.pref_manager.bookrestore_apply_mode == BookRestoreApplyMethod.AFC:
                     # BookRestore AFC method (for both localhost and on-device)
@@ -659,6 +661,8 @@ class DeviceManager:
                 else:
                     with open(self.data_singleton.gestalt_path, 'rb') as in_fp:
                         gestalt_plist = plistlib.load(in_fp)
+            # Keep the imported source so the companion can detect stale edits.
+            gestalt_source_data = plistlib.dumps(gestalt_plist) if gestalt_plist is not None else None
             # create the other plists
             flag_plist: dict = {}
             eligibility_files = None
@@ -758,6 +762,8 @@ class DeviceManager:
                     path=FileLocation.mga.value,
                     files_to_restore=files_to_restore, use_bookrestore=True
                 )
+                if self.data_singleton.current_device.has_worse_query():
+                    files_to_restore[-1].query_baseline = gestalt_source_data
             if eligibility_files:
                 new_eligibility_files: dict[FileToRestore] = []
                 if not self.get_current_device_partially_supported():
@@ -816,7 +822,7 @@ class DeviceManager:
             #     ))
 
             # Restore SSL Configuration Profiles
-            if uses_domains and self.pref_manager.restore_truststore:
+            if uses_domains and self.pref_manager.restore_truststore and not self.data_singleton.current_device.has_worse_query():
                 with open(get_bundle_files('files/SSLconf/TrustStore.sqlite3'), 'rb') as f:
                     certsDB = f.read()
 

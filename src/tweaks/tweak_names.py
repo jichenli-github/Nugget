@@ -117,3 +117,4 @@ class TweakID(Enum):
     # daemons
     Daemons = auto()
     ClearScreenTimeAgentPlist = auto()
+    AIRegion = auto()
