@@ -24,8 +24,16 @@ class ResetDialog(QDialog):
         layout.addWidget(message)
 
         pages = get_resettable_pages(self.device_manager)
-        for page in pages:
+        device = device_manager.data_singleton.current_device
+        display_pages = pages
+        if device is not None and device.has_worse_query():
+            display_pages = [Page.Gestalt, Page.FeatureFlags, Page.StatusBar, Page.Springboard,
+                             Page.InternalOptions, Page.Daemons, Page.RiskyTweaks]
+        for page in display_pages:
             pageChk = QCheckBox(page.getPageName())
+            if page not in pages:
+                pageChk.setEnabled(False)
+                pageChk.setToolTip(self.tr("This page cannot be reset through worse_query on iOS 27.0–27.2."))
             pageChk.toggled.connect(lambda checked, p=page: self.toggle_page(checked, p))
             layout.addWidget(pageChk)
         

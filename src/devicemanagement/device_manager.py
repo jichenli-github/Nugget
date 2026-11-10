@@ -46,7 +46,7 @@ from src.restore.restore import restore_files, FileToRestore
 from src.restore.bookrestore import perform_bookrestore, create_server_folder, create_local_server, cleanup_server_folder, close_dl_connection, generate_bldbmanager, br_files
 from src.restore.bookrestore import BookRestoreFileTransferMethod, BookRestoreApplyMethod
 from src.restore.mbdb import _FileMode
-from src.restore.worse_query import perform_worse_query, split_query_files
+from src.restore.worse_query import perform_worse_query, split_query_files, supports_query_tweak
 
 def show_error_msg(txt: str, title: str = "Error!", icon = QMessageBox.Critical, detailed_txt: str = None):
     detailsBox = QMessageBox()
@@ -323,7 +323,7 @@ class DeviceManager:
                 elif app["CFBundleExecutable"] == "LiveContainer":
                     # fallback for live container
                     bundle_id = app["CFBundleIdentifier"]
-            async with HouseArrestService(lockdown=ld, bundle_id=bundle_id, documents_only=True) as afc:
+            async with await HouseArrestService.create(lockdown=ld, bundle_id=bundle_id, documents_only=True) as afc:
                 # send each hash over
                 for key in hashes.keys():
                     fname = "Nugget" + key.replace("com.apple.", "") + "Hash"
@@ -680,6 +680,8 @@ class DeviceManager:
             # set the plist keys
             for tweak_name in tweaks:
                 tweak = tweaks[tweak_name]
+                if self.data_singleton.current_device.has_worse_query() and not supports_query_tweak(tweak, tweak_name):
+                    continue  # Preserve legacy selections but do not apply disabled features on iOS 27.
                 if isinstance(tweak, FeatureFlagTweak):
                     flag_plist = tweak.apply_tweak(flag_plist)
                     if tweak.enabled:
@@ -834,7 +836,7 @@ class DeviceManager:
                     mode=_FileMode.S_IRUSR | _FileMode.S_IWUSR  | _FileMode.S_IRGRP | _FileMode.S_IWGRP | _FileMode.S_IROTH | _FileMode.S_IWOTH
                 ))
 
-            if tweaks[TweakID.CreateBRFolders].enabled == True:
+            if tweaks[TweakID.CreateBRFolders].enabled and not self.data_singleton.current_device.has_worse_query():
                 use_bookrestore = False
                 files_to_restore.extend(tweaks[TweakID.CreateBRFolders].apply_tweak())
 

@@ -16,6 +16,7 @@ from src.devicemanagement.device_manager import DeviceManager
 from src.gui.dialogs import GestaltDialog, UpdateAppDialog
 from src.gui.dialogs.reset_dialog import ResetDialog
 from src.gui.thread_workers.apply_worker import ApplyThread, ApplyAlertMessage, RefreshDevicesThread, set_sudo_pwd, set_sudo_complete, get_sudo_pwd
+from src.gui.query_availability import QueryAvailability
 from src.gui.pages.pages_list import Page
 from src.restore.bookrestore import BookRestoreFileTransferMethod, BookRestoreApplyMethod
 
@@ -74,6 +75,8 @@ class MainWindow(QtWidgets.QMainWindow):
             Page.RiskyTweaks: Pages.Risky(ui=self.ui),
             Page.Settings: Pages.Settings(window=self, ui=self.ui)
         }
+
+        self.query_availability = QueryAvailability(self.ui)
 
         # Check for an update
         if is_update_available(App_Version, App_Build):
@@ -252,6 +255,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.gestaltLocationLbl.setText(selected_file)
 
     def change_selected_device(self, index):
+        self.query_availability.restore()
         self.ui.showAllSpoofableChk.hide()
         self.pages[Page.Settings].set_risky_options_visible(
             visible=self.device_manager.pref_manager.allow_risky_tweaks,
@@ -329,7 +333,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.ui.enableAIChk.show()
                 self.ui.euEnablerPageBtn.show()
                 self.ui.aiEnablerContent.hide()
-                self.ui.rdarFixChk.hide()
+                self.ui.rdarFixChk.show()
+                # Folder reset selections from another device must not mask
+                # otherwise supported wallpaper imports on this device.
+                self.ui.resetPBDrp.deselectAll()
             if device_ver >= Version("18.0"):
                 # show the other dynamic island options
                 self.ui.dynamicIslandDrp.addItem("2622 (iPhone 16 Pro Dynamic Island)")
@@ -424,6 +431,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # update the interface
         self.updateInterfaceForNewDevice()
+        self.query_availability.apply(self.device_manager.data_singleton.current_device)
+        for template in tweaks[TweakID.Templates].templates:
+            template.update_query_availability(self.device_manager.data_singleton.current_device)
         if index > -1:
             self.warn_for_dev_beta()
 

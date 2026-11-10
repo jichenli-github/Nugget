@@ -147,6 +147,7 @@ class SettingsPage(Page):
         # save the setting
         self.window.settings.setValue("show_risky_tweaks", checked)
         self.set_risky_options_visible(checked)
+        self.window.query_availability.apply(self.window.device_manager.data_singleton.current_device)
     def on_ignorePBFrameLimitChk_toggled(self, checked: bool):
         set_ignore_frame_limit(checked)
         # save the setting

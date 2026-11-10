@@ -146,7 +146,7 @@ def transport(afc, apps=None):
     context = AsyncMock()
     context.__aenter__.return_value = ips
     with patch.object(query, "InstallationProxyService", return_value=context), \
-            patch.object(query, "HouseArrestService", return_value=afc) as arrest:
+            patch.object(query.HouseArrestService, "create", autospec=True, return_value=afc) as arrest:
         yield arrest
 
 
@@ -155,7 +155,7 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         afc = FakeAFC()
         with transport(afc) as arrest:
             await query.perform_worse_query(mga(), device(), None, lambda _: None)
-        self.assertEqual(arrest.call_args.kwargs["bundle_id"], "custom.id")
+        arrest.assert_awaited_once_with(lockdown=None, bundle_id="custom.id", documents_only=True)
         self.assertEqual(list(afc.files), [query.PENDING, query.RESULT])
         self.assertEqual(afc.published["operation"], "batch")
 

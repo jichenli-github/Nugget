@@ -9,6 +9,7 @@ from ...tweak_classes import Tweak
 from ..template_file import TemplateFile
 
 from src.restore.restore import FileToRestore
+from src.devicemanagement.constants import Version
 from src.exceptions.posterboard_exceptions import PBTemplateException
 
 class TemplatesTweak(Tweak):
@@ -99,6 +100,10 @@ class TemplatesTweak(Tweak):
         update_label("Extracting templates...")
         # extract templates
         for template in self.templates:
+            if Version(version) >= Version("27.0") and Version(version) <= Version("27.2"):
+                from src.restore.worse_query import supports_query_template
+                if not supports_query_template(template):
+                    continue  # Disabled template rows are not applied on iOS 27.
             # ignore PosterBoard templates since that is handled in PosterBoard tweaks
             if template.domain != 'com.apple.PosterBoard' and template.domain != 'AppDomain-com.apple.PosterBoard':
                 temp_dir = os.path.join(output_dir, str(uuid.uuid4()))

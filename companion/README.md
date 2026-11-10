@@ -52,8 +52,8 @@ MobileGestalt requests and preserves their original-backup format.
 5. Restart the device to test effects. PosterBoard format/key compatibility on
    27.x remains unverified, even if all bytes were written successfully.
 6. **Reset → Mobile Gestalt** restores the first saved original for this OS
-   build. Other unsupported global reset pages are excluded from the iOS 27
-   reset dialog. Directory resets (including PosterBoard folder nullification)
+   build. Other unsupported global reset pages are visible but disabled in the
+   iOS 27 reset dialog. Directory resets (including PosterBoard folder nullification)
    are rejected during on-device preflight; directory deletion is not emulated.
 
 MobileGestalt edits with a supplied source baseline are rebased onto the current
@@ -80,6 +80,21 @@ may already contain modifications from another tool.
 On timeout/disconnection the write status is **unknown**. Inspect the companion
 and current files before retrying. The host never overwrites an unfinished
 pending/processing request, and requests are not executed automatically.
+
+## Disabled controls on iOS 27
+
+Known unsupported pages and controls are greyed out with a reason tooltip.
+SpringBoard retains only the lock-screen-footnote editor; MG, AI-region presets,
+wallpaper file imports and supported container templates remain available.
+The original iPadOS toggle is disabled because it also patches CacheData.
+PosterBoard directory reset and old restore-only settings are disabled. Changing
+to a legacy OS restores the widgets' previous enablement, visibility and tooltips.
+
+Stale built-in selections from a legacy device are not used to generate files on
+iOS 27; their legacy state is preserved. Known unsupported template rows have
+disabled options and are not applied, but their delete buttons remain usable.
+The transport still rejects any unsupported or invalid destination that reaches
+it; UI gating never authorizes additional filesystem access.
 
 ## Protocol and container resolution
 

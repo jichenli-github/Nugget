@@ -147,7 +147,7 @@ async def perform_worse_query(files, device, lockdown_client, progress_callback,
         ), detailed_text="See companion/README.md in the Nugget source repository.")
     if all_apps:
         request = make_request(files, device.build, device.version, all_apps)
-    async with HouseArrestService(lockdown=lockdown_client, bundle_id=companions[0], documents_only=True) as afc:
+    async with await HouseArrestService.create(lockdown=lockdown_client, bundle_id=companions[0], documents_only=True) as afc:
         if await afc.exists(PENDING) or await afc.exists(PROCESSING):
             raise NuggetException(QCoreApplication.tr(
                 "A NuggetQuery request is already pending. Complete or discard it in the companion app first."
@@ -177,3 +177,47 @@ async def perform_worse_query(files, device, lockdown_client, progress_callback,
         raise NuggetException(QCoreApplication.tr(
             "Timed out waiting for NuggetQuery. The write result is unknown. Check the companion app before retrying."
         ))
+
+
+def supports_query_tweak(tweak, tweak_id=None):
+    """Ignore stale selections from disabled controls without altering legacy state.
+
+    Templates still undergo destination preflight; this only classifies built-in
+    tweaks whose targets are known. No unsupported file is passed to a restore.
+    """
+    from src.tweaks.tweak_classes import (BasicPlistTweak, NullifyFileTweak,
+                                          FeatureFlagTweak, MobileGestaltCacheDataTweak)
+    from src.tweaks.eligibility_tweak import EligibilityTweak, AITweak, BookRestoreFileTweak
+    from src.tweaks.passcode_theme_tweak import PasscodeThemeTweak
+    from src.tweaks.status_bar.status_bar_tweak import StatusBarTweak
+    from src.tweaks.tweak_names import TweakID
+    from src.restore.restore import FileToRestore
+    if tweak_id in (TweakID.iPadOS, TweakID.iPadOSCacheData):
+        return False
+    if isinstance(tweak, (FeatureFlagTweak, MobileGestaltCacheDataTweak, EligibilityTweak,
+                          AITweak, BookRestoreFileTweak, PasscodeThemeTweak, StatusBarTweak)):
+        return False
+    if isinstance(tweak, (BasicPlistTweak, NullifyFileTweak)):
+        try:
+            destination(FileToRestore(b"", tweak.file_location.value))
+        except NuggetException:
+            return False
+    return True
+
+
+def supports_query_template(template):
+    from src.restore.restore import FileToRestore
+    domain = template.domain
+    if domain == "com.apple.PosterBoard":
+        domain = "AppDomain-com.apple.PosterBoard"
+    if template.change_bundle_id:
+        domain = "AppDomain-" + template.bundle_id
+    path = "/__nugget_container_probe"
+    if domain.startswith("Sparserestore-"):
+        path = domain[len("Sparserestore-"):] + path
+        domain = ""
+    try:
+        destination(FileToRestore(b"", path, domain=domain))
+        return True
+    except NuggetException:
+        return False

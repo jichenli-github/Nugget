@@ -71,7 +71,7 @@ class GestaltPage(Page):
     def set_rdar_fix_label(self):
         device = self.window.device_manager.data_singleton.current_device
         if device is not None and device.has_worse_query():
-            self.ui.rdarFixChk.hide()
+            self.ui.rdarFixChk.show()
             return
         rdar_title = tweaks[TweakID.RdarFix].get_rdar_title()
         if rdar_title == "hide":

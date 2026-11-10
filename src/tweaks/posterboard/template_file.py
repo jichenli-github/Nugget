@@ -168,6 +168,7 @@ class TemplateFile(TendieFile):
 
     def create_ui(self, window, tweak, widgets: dict, templateLayout: QtWidgets.QVBoxLayout):
         if self.loaded:
+            self.update_query_availability(window.device_manager.data_singleton.current_device)
             return
         widget = QtWidgets.QWidget()
         widgets[self] = widget
@@ -313,3 +314,19 @@ class TemplateFile(TendieFile):
         widget.setLayout(layout)
         templateLayout.addWidget(widget)
         self.loaded = True
+        self._query_title = title_widget
+        self._query_options = options_widget
+        self._query_styles = {item: item.styleSheet() for item in (title_widget, options_widget, self.domain_lbl)}
+        self.update_query_availability(window.device_manager.data_singleton.current_device)
+
+    def update_query_availability(self, device):
+        from src.restore.worse_query import supports_query_template
+        if not self.loaded:
+            return
+        unavailable = device is not None and device.has_worse_query() and not supports_query_template(self)
+        for widget in (self._query_title, self._query_options, self.domain_lbl):
+            widget.setEnabled(not unavailable)
+            widget.setStyleSheet(self._query_styles[widget] + ("\nQWidget:disabled { color: #777777; }" if unavailable else ""))
+            widget.setToolTip(QtCore.QCoreApplication.tr(
+                "Unavailable on iOS 27.0–27.2: this template targets files outside supported containers."
+            ) if unavailable else "")
